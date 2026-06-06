@@ -1,255 +1,310 @@
-# streaming-06-scenarios
+# Module 6: Database Integration with Streaming Pipelines - streaming-06-scenarios
 
-[![API Reference](https://img.shields.io/badge/API--Utils-datafun--streaming-purple)](https://denisecase.github.io/datafun-streaming/api/)
-[![Workflow Guide](https://img.shields.io/badge/Pro--Guide-pro--analytics--02-green)](https://denisecase.github.io/pro-analytics-02/workflow-b-apply-example-project/)
-[![Python 3.14](https://img.shields.io/badge/python-3.14%2B-blue?logo=python)](./pyproject.toml)
-[![MIT](https://img.shields.io/badge/license-see%20LICENSE-yellow.svg)](./LICENSE)
+## Overview
 
-> Streaming data analytics: complete pipeline.
+This project demonstrates how to build a Kafka streaming pipeline that reads
+sales data from a CSV file, sends valid records to a Kafka topic, consumes
+those records, enriches the messages, stores the results in DuckDB, writes
+output files, and creates a live sales chart.
 
-Streaming analytics requires working with data in motion
-and distributed, scalable systems.
-This course builds capabilities through working projects.
-In the age of generative AI, durable skills are grounded in real work:
-setting up a professional environment,
-reading and running code,
-understanding the logic,
-and pushing work to a shared repository.
-Each project follows the structure of professional Python projects.
-We learn by doing.
+The project shows how streaming data can be validated, processed, enriched,
+stored, and analyzed after consumption.
 
-## This Project
+## Project Scenario
 
-This project brings the full streaming analytics workflow together.
+The custom problem for this module is:
+**Real-Time Sales Performance and Customer/Channel Monitoring**
 
-The project uses Kafka to move sales messages from a producer to a consumer.
-The producer sends validated sales messages to a Kafka topic.
-The consumer reads each message, validates required fields, computes derived values,
-updates a live chart, writes processed records to CSV, and stores results in DuckDB.
+The goal is to monitor sales transactions as they move through a Kafka
+streaming pipeline. Each message represents one sales order. The consumer
+enriches each message with business intelligence fields that help identify
+sales performance by region, product category, sales channel, and order value.
 
-This module combines the major skills from the course:
+## Technologies Used
 
-- producing messages
-- consuming messages
-- validating message structure
-- computing derived fields
-- visualizing the stream
-- storing processed data
+This project uses:
 
-The goal is to see how the parts work together in one complete scenario.
+- Python
+- Kafka
+- DuckDB
+- CSV files
+- Matplotlib
+- PowerShell
+- WSL Ubuntu
+- VS Code
+- uv
 
-## Working Files
+## Project Files
 
-You'll work with just these areas:
+The main custom files for this project are:
 
-- **data/** - input data and generated output files
-- **docs/** - the project narrative and documentation
-- **src/streaming/** - producer, consumer, and supporting code
-- **pyproject.toml** - update authorship & links
-- **zensical.toml** - update authorship & links
+```text
+src/streaming/kafka_admin_femi.py
+src/streaming/kafka_producer_femi.py
+src/streaming/kafka_consumer_femi.py
+src/streaming/data_engineering/derived_fields_femi.py
+src/streaming/data_validation/data_contract_femi.py
+src/streaming/data_validation/data_validation_femi.py
+src/streaming/storage/storage_femi.py
+src/streaming/visualizations/live_visualizations_femi.py
 
-## Instructions
 
-Follow the
-[step-by-step workflow guide](https://denisecase.github.io/pro-analytics-02/workflow-b-apply-example-project/)
-to complete:
+Dataset
 
-1. Phase 1. **Start & Run**
-2. Phase 2. **Change Authorship**
-3. Phase 3. **Read & Understand**
-4. Phase 4. **Modify**
-5. Phase 5. **Apply**
+The producer streams data from:
 
-## Challenges
+data/sales.csv
 
-Challenges are expected.
-Sometimes instructions may not quite match your operating system.
-When issues occur, share screenshots, error messages, and details about what you tried.
-Working through issues is part of implementing professional projects.
+This file contains sales transaction records. Each row represents one sales order.
 
-## Success
+The sales records include fields such as:
 
-After completing Phase 1. **Start & Run**, you'll have your own GitHub project
-running with Kafka.
+order_id
+datetime
+region_id
+currency_code
+product_id
+unit_price
+quantity
+is_online
+customer_id
+is_new_customer
+device_type
+payment_method
+referral_source
+discount_code
+customer_note
 
-Use four named terminals:
+The project also uses static reference tables:
 
-1. **kafka** - keep the Kafka message broker running
-2. **topics** - create, list, or reset Kafka topics
-3. **producer** - run the project and producer
-4. **consumer** - run the consumer
+data/regions.csv
+data/products.csv
+data/currencies.csv
+data/discount_codes.csv
 
-After the producer and consumer run successfully, you should see:
+These files are not streamed directly. They are used for validation and enrichment. For example, regions.csv provides tax rates, and products.csv provides product category information.
 
-```shell
-========================
-Consumer executed successfully!
-========================
-```
+Kafka Topic
 
-A new file `project.log` will appear in the root project folder
-and processed data will appear in data/output/.
+The Kafka topic used for this project is:
 
-## Command Reference
+streaming-06-scenarios-case
 
-The commands below are used in the workflow guide above.
-They are provided here for convenience.
+The producer sends valid sales records to this topic.
 
-**Important:** the first few times you run a project,
-follow the guide with the **complete instructions**.
+The Kafka message key is:
 
-<details>
-<summary>Show command reference</summary>
+region_id
 
-### In a machine terminal (open in your `Repos` folder)
+Using region_id as the key helps group sales messages by region.
 
-After you get a copy of this repo in your own GitHub account,
-open a machine terminal in your `Repos` folder:
+Producer
 
-```bash
-# Replace username with YOUR GitHub username.
-git clone https://github.com/username/streaming-06-scenarios
+The producer file is:
 
-cd streaming-06-scenarios
-code .
-```
+src/streaming/kafka_producer_femi.py
 
-### In VS Code Terminal 1: Start Kafka (kafka)
+The producer reads records from data/sales.csv, validates each record, and sends valid records to Kafka.
 
-For full instructions see
-[**start kafka**](https://denisecase.github.io/pro-analytics-02/kafka/start-kafka/).
+If a record is invalid, it is not sent to Kafka. Instead, it is written to:
 
-If any command fails,
-repeat the steps at
-[**install kafka**](https://denisecase.github.io/pro-analytics-02/kafka/install-kafka/)
-until starting up is reliable.
+data/output/producer_rejected_sales_femi.csv
 
-Open a new VS Code terminal. Rename it `kafka`.
-If running Windows, specify the terminal type as **wsl** or
-type `wsl`.
-Run the commands one at a time.
+The producer validates records using the custom data contract and reference tables.
 
-Step 1. Verify Java and PATH
+Consumer
 
-```bash
-echo "$JAVA_HOME"
+The consumer file is:
 
-"$JAVA_HOME/bin/java" --version
-```
+src/streaming/kafka_consumer_femi.py
 
-Step 2. Rebuild ClusterID (as needed)
+The consumer reads messages from the Kafka topic and processes each sales record.
 
-```bash
-cd ~/kafka
+For each valid consumed message, the consumer:
 
-rm -rf /tmp/kraft-combined-logs
+validates required fields
+calculates subtotal
+calculates tax amount
+calculates total
+adds product category
+classifies the sales channel
+creates an order size band
+flags high-value orders
+tracks running sales total by region
+updates running statistics
+updates a live chart
+writes accepted records to CSV
+stores accepted records in DuckDB
+stores rejected records in DuckDB
+Technical Modifications
 
-KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
+Several technical modifications were made for this project.
 
-echo "Cluster ID: $KAFKA_CLUSTER_ID"
+Modified Output File Names
 
-bin/kafka-storage.sh format --standalone -t "$KAFKA_CLUSTER_ID" -c config/server.properties
-```
+The output files were customized with _femi in the file names.
 
-Step 3. Start kafka server (keep running)
+Expected output files include:
 
-```bash
-cd ~/kafka
+data/output/producer_rejected_sales_femi.csv
+data/output/consumed_sales_femi.csv
+data/output/sales_femi.duckdb
+data/output/sales_chart_femi.png
+Added Derived Fields
 
-bin/kafka-server-start.sh config/server.properties
-```
+The consumer now adds new analytics fields to each accepted sales message:
 
-### In VS Code terminal 2: Create Topic (topics)
+subtotal
+tax_amount
+total
+product_category
+sales_channel
+order_size_band
+high_value_order
+region_running_total
+Added Product Category Enrichment
 
-For full instructions see
-[**create topic**](https://denisecase.github.io/pro-analytics-02/kafka/create-topic/).
+The consumer uses data/products.csv to add product category information to each consumed sales message.
 
-The topic name must match the name defined in your
-`.env` file (copy `.env.example` to `.env`).
+Added Sales Channel Classification
 
-Open another VS Code terminal. Rename it `topics`.
-If running Windows, specify the terminal type as **wsl** or
-type `wsl`.
-Run the commands one at a time.
+The consumer classifies each sale based on whether it was online and which device type was used.
 
-```bash
-cd ~/kafka
+Examples include:
 
-bin/kafka-topics.sh --create \
-  --bootstrap-server localhost:9092 \
-  --partitions 1 \
-  --replication-factor 1 \
-  --topic streaming-06-scenarios-case
-```
+online_mobile
+online_desktop
+online_tablet
+offline
+Added High-Value Order Flag
 
-### In VS Code Terminal 3: Run Project and Producer (producer)
+The consumer flags orders as high-value if they meet or exceed the high-value threshold.
 
-Open another VS Code terminal. Rename it `producer`.
-If running Windows, use **PowerShell**.
-Run the commands one at a time.
+The field is:
 
-```shell
-# reset uv cache only if/when you start getting strange dependency errors
-# uv cache clean
+high_value_order
+Added Order Size Band
 
-uv self update
-uv python pin 3.14
-uv sync --extra dev --extra docs --upgrade
+The consumer classifies each order as:
 
-uvx pre-commit install
+low
+medium
+high
+Added Running Regional Sales Total
 
-git add -A
-uvx pre-commit run --all-files
-# repeat if changes were made
-git add -A
-uvx pre-commit run --all-files
+The consumer tracks how much revenue is accumulating by region while messages are consumed.
 
-# run the producer
-clear
-uv run python -m streaming.kafka_producer_case
+The field is:
 
-# do chores
-uv run ruff format .
-uv run ruff check . --fix
-uv run python -m pyright
-uv run python -m pytest
-uv run python -m zensical build
+region_running_total
+Added DuckDB Storage Summary
 
-# save progress
-git add -A
-git commit -m "update"
-git push -u origin main
-```
+The storage file summarizes consumed data by:
 
-### In VS Code Terminal 4: Run Consumer (consumer)
+valid row count
+rejected row count
+sales by region
+sales by product category
+sales by channel
+high-value order status
+New Problem Applied
 
-Open another VS Code terminal. Rename it `consumer`.
-If running Windows, use **PowerShell**.
-Run the commands one at a time.
-Clear the terminal, then start the consumer.
+For Phase 5, I applied the streaming skills to a new business problem:
 
-```shell
-clear
-uv run python -m streaming.kafka_consumer_case
-```
+Real-time sales performance and customer/channel monitoring
 
-To start fresh, see
-[manage topics](https://denisecase.github.io/pro-analytics-02/kafka/manage-topics/)
-to delete the topic and recreate it.
+This new problem uses the Kafka pipeline to help answer questions such as:
 
-</details>
+Which regions are generating sales?
+Which product categories are being purchased?
+Which sales channels are being used?
+Which orders are high-value?
+How much revenue is accumulating by region?
+How many records were accepted or rejected?
+How to Run the Project
 
-## Notes
+Before running the Python files, make sure Kafka is running in WSL.
 
-- Use the **UP ARROW** and **DOWN ARROW** in the terminal to scroll through past commands.
-- Use `CTRL+f` to find (and replace) text within a file.
-- You do not need to add to or modify `tests/`. They are provided for example only.
-- Many files are silent helpers. Explore as you like, but nothing is required.
-- You do NOT not to understand everything; understanding builds naturally over time.
+Then run the files from the project root folder in this order.
 
-## Troubleshooting >>> or
+1. Run the Kafka admin file
+uv run python -m streaming.kafka_admin_femi
 
-If you see something like this in your terminal: `>>>` or `...`
-You accidentally started Python interactive mode.
-It happens.
-Press `Ctrl+c` (both keys together) or `Ctrl+Z` then `Enter` on Windows.
+This verifies or creates the Kafka topic.
+
+2. Run the Kafka producer
+uv run python -m streaming.kafka_producer_femi
+
+This reads sales records from data/sales.csv, validates them, and sends valid messages to Kafka.
+
+3. Run the Kafka consumer
+uv run python -m streaming.kafka_consumer_femi
+
+This consumes messages from Kafka, enriches them, stores them, writes output files, and saves the chart.
+
+Output Artifacts
+
+The project creates output artifacts in:
+
+data/output/
+
+Expected output artifacts are:
+
+producer_rejected_sales_femi.csv
+consumed_sales_femi.csv
+sales_femi.duckdb
+sales_chart_femi.png
+
+The CSV file can be opened and reviewed directly.
+
+The DuckDB file is a database file and should be reviewed using DuckDB queries or through the terminal summary logs.
+
+The PNG chart shows the sales total by Kafka message.
+
+Results
+
+When the project runs successfully, the admin file verifies that the Kafka topic exists.
+
+The producer sends valid sales messages to Kafka and writes any rejected records to the rejected producer CSV file.
+
+The consumer reads the Kafka messages and enriches each valid record with new analytics fields. It writes accepted records to a CSV file, stores records in DuckDB, updates a live chart, and saves the final chart image.
+
+The consumer also logs running statistics, including:
+
+total sales
+average sale
+minimum sale
+maximum sale
+accepted message count
+skipped message count
+
+The DuckDB summary logs provide additional insights about sales by region, product category, sales channel, and high-value order status.
+
+Interpretation
+
+This project shows how Kafka can be used to move data through a streaming pipeline. The producer sends sales messages to Kafka, Kafka stores the messages in a topic, and the consumer reads and processes those messages.
+
+The original example focused on basic message streaming. My custom version adds stronger validation, enrichment, charting, DuckDB storage, and business intelligence fields.
+
+The stream could help a business monitor sales activity in real time. Instead of only seeing raw sales records, the business can understand sales totals, regional activity, product category performance, channel performance, and high-value order activity.
+
+The business intelligence gained from the consumed messages includes:
+
+total revenue
+average order value
+minimum and maximum order values
+sales by region
+sales by product category
+sales by sales channel
+high-value order counts
+rejected message tracking
+
+Overall, this module helped me understand how streaming data and stored data work together. Kafka handles the movement of data, while CSV files, DuckDB, and charts make the data useful for review and analysis.
+
+What I Learned
+
+In this module, I learned how to connect a Kafka producer and consumer to a database-backed streaming pipeline. I learned how to validate records before sending them, enrich records after consuming them, and save the processed results for later analysis.
+
+I also learned that field names and data types must match across the producer, consumer, data contract, storage file, and output files. Small mismatches can cause errors, so testing each step is important.
+
+This project helped me better understand how real-time data pipelines can support business decisions.
