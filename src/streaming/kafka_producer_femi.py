@@ -1,26 +1,19 @@
-"""src/streaming/kafke_producer_femi.py - Kafka producer example.
+"""src/streaming/kafka_producer_femi.py - Kafka producer example.
 
 Reads sales from data/sales.csv,
 validates them against the data contract,
 writes rejected records to a local CSV file,
 and sends valid records to a Kafka topic one message at a time.
 
-Start with main() at the bottom.
-Work up to see how it all fits together.
-
-Many functions are standard helpers
-and should not need project-specific modifications.
+Technical Modification:
+- Output rejected records file now uses _femi in the filename.
 
 Author: O S
 Date: 2026-06-06
 
-Terminal command to run this file from the root project folder:
+Run from the root project folder:
 
     uv run python -m streaming.kafka_producer_femi
-
-OBS:
-  Don't edit this file - it should remain a working example.
-  Copy it, rename it producer_yourname.py, and modify your copy.
 """
 
 # === DECLARE IMPORTS ===
@@ -72,11 +65,9 @@ log_env_vars(LOG)
 
 # === DECLARE GLOBAL CONSTANTS ===
 
-# get from .env as strings with defaults
 msg_count = os.getenv("PRODUCER_MESSAGE_COUNT", "6")
 msg_interval_seconds = os.getenv("PRODUCER_MESSAGE_INTERVAL_SECONDS", "2.0")
 
-# then convert to correct types for CONSTANTS
 MESSAGE_COUNT: Final[int] = int(msg_count)
 MESSAGE_INTERVAL_SECONDS: Final[float] = float(msg_interval_seconds)
 
@@ -89,12 +80,7 @@ OUTPUT_DIR: Final[Path] = DATA_DIR / "output"
 SALES_CSV: Final[Path] = DATA_DIR / "sales.csv"
 REGIONS_CSV: Final[Path] = DATA_DIR / "regions.csv"
 PRODUCTS_CSV: Final[Path] = DATA_DIR / "products.csv"
-REJECTED_SALES_CSV: Final[Path] = OUTPUT_DIR / "producer_rejected_sales.csv"
-
-
-# =======================================================
-# DEFINE SECTION A. ACQUIRE RESOURCES AND GET READY HELPERS
-# ==========================================================
+REJECTED_SALES_CSV: Final[Path] = OUTPUT_DIR / "producer_rejected_sales_femi.csv"
 
 
 def log_paths() -> None:
@@ -112,11 +98,7 @@ def log_paths() -> None:
 
 
 def load_settings() -> KafkaSettings:
-    """Load settings from .env and log them.
-
-    Returns:
-        A KafkaSettings instance populated from environment variables.
-    """
+    """Load settings from .env and log them."""
     LOG.info("Loading settings from .env...")
     settings = KafkaSettings.from_env()
     LOG.info(f"KAFKA_BOOTSTRAP_SERVERS           = {settings.bootstrap_servers}")
@@ -128,11 +110,7 @@ def load_settings() -> KafkaSettings:
 
 
 def verify_connection(settings: KafkaSettings) -> None:
-    """Verify Kafka is reachable before doing anything else.
-
-    Raises:
-        SystemExit: If Kafka is not reachable.
-    """
+    """Verify Kafka is reachable before doing anything else."""
     LOG.info("Verifying Kafka connection...")
     try:
         verify_kafka_connection(settings)
@@ -143,19 +121,13 @@ def verify_connection(settings: KafkaSettings) -> None:
 
 
 def load_reference_data() -> tuple[set[str], set[str]]:
-    """Load and validate reference data.
-
-    Returns:
-        A tuple of (valid_region_ids, valid_product_ids).
-
-    Raises:
-        SystemExit: If any reference file is missing or invalid.
-    """
+    """Load and validate reference data."""
     LOG.info("Loading validation reference data...")
     region_records = read_csv_rows(REGIONS_CSV)
     product_records = read_csv_rows(PRODUCTS_CSV)
 
     errors: list[str] = []
+
     errors.extend(
         validate_reference_records(
             records=region_records,
@@ -163,6 +135,7 @@ def load_reference_data() -> tuple[set[str], set[str]]:
             label="regions.csv",
         )
     )
+
     errors.extend(
         validate_reference_records(
             records=product_records,
@@ -179,23 +152,17 @@ def load_reference_data() -> tuple[set[str], set[str]]:
 
     valid_region_ids = make_lookup_set(region_records, "region_id")
     valid_product_ids = make_lookup_set(product_records, "product_id")
+
     LOG.info(
-        f"Found {len(valid_region_ids)} valid regions, {len(valid_product_ids)} valid products."
+        f"Found {len(valid_region_ids)} valid regions, "
+        f"{len(valid_product_ids)} valid products."
     )
+
     return valid_region_ids, valid_product_ids
 
 
-# ===========================================================================
-# DEFINE SECTION P. PRODUCE MESSAGES HELPERS
-# ===========================================================================
-
-
 def get_message_key(message: dict[str, Any]) -> str:
-    """Return the Kafka message key for a sale record.
-
-    We use region_id as the key so all sales from the same region
-    go to the same Kafka partition — keeping them in order.
-    """
+    """Return the Kafka message key for a sale record."""
     try:
         return str(message["region_id"])
     except KeyError as error:
@@ -207,19 +174,7 @@ def get_message_key(message: dict[str, Any]) -> str:
 
 
 def generate_messages(count: int) -> Generator[dict[str, str]]:
-    """Generate a stream of sales from the input CSV file.
-
-    A generator function uses yield instead of return.
-    It produces one value at a time instead of computing everything at once.
-    This is how we model data in motion — one event arriving at a time.
-    A real sales feed works the same way: each sale arrives as it happens.
-
-    Arguments:
-        count: How many sales to generate.
-
-    Yields:
-        One sale row dictionary at a time.
-    """
+    """Generate a stream of sales from the input CSV file."""
     sales_rows = read_csv_rows(SALES_CSV)
     yield from sales_rows[:count]
 
@@ -237,8 +192,10 @@ def initialize_output() -> None:
     """Initialize output directory and clear rejected CSV from prior runs."""
     LOG.info("Initializing output...")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
     if REJECTED_SALES_CSV.exists():
         REJECTED_SALES_CSV.unlink()
+
     LOG.info(f"Output directory ready: {OUTPUT_DIR.name}")
 
 
@@ -248,22 +205,7 @@ def send_messages(
     valid_region_ids: set[str],
     valid_product_ids: set[str],
 ) -> tuple[int, int]:
-    """Generate, validate, and send messages to the Kafka topic.
-
-    For each message:
-      - Validate it against the data contract.
-      - If invalid, write it to the rejected CSV and skip.
-      - If valid, send it to the Kafka topic and wait before the next one.
-
-    Arguments:
-        producer: An open Kafka producer.
-        settings: Kafka settings including the topic name.
-        valid_region_ids: Set of known region IDs for validation.
-        valid_product_ids: Set of known product IDs for validation.
-
-    Returns:
-        A tuple of (sent_count, rejected_count).
-    """
+    """Generate, validate, and send messages to the Kafka topic."""
     LOG.info("Sending messages...")
     LOG.info(f"Sending up to {MESSAGE_COUNT} message(s) to topic {settings.topic!r}.")
     LOG.info("Watch each sale arrive. Press CTRL+C to stop early.\n")
@@ -304,28 +246,20 @@ def send_messages(
 
     except (FileNotFoundError, KeyError, RuntimeError, ValueError) as error:
         LOG.error(str(error))
-        LOG.error("  Producer stopped before completing all messages.")
+        LOG.error("Producer stopped before completing all messages.")
         raise SystemExit(1) from error
 
     return sent_count, rejected_count
 
 
 def log_rejected(rejected_count: int) -> None:
-    """Log the rejected records CSV path if any records were rejected.
-
-    Arguments:
-        rejected_count: The number of rejected records.
-    """
+    """Log rejected records output path if any records were rejected."""
     LOG.info("Checking for rejected records...")
+
     if rejected_count > 0:
         log_path(LOG, "  WROTE REJECTED_SALES_CSV", REJECTED_SALES_CSV)
     else:
         LOG.info("  No records rejected.")
-
-
-# ===========================================================================
-# DEFINE SECTION E. EXIT AND CLEANUP HELPERS
-# ===========================================================================
 
 
 def log_summary(sent_count: int, rejected_count: int, settings: KafkaSettings) -> None:
@@ -336,11 +270,6 @@ def log_summary(sent_count: int, rejected_count: int, settings: KafkaSettings) -
     LOG.info("========================")
     LOG.info("Producer executed successfully!")
     LOG.info("========================")
-
-
-# ===========================================================================
-# MAIN FUNCTION
-# ===========================================================================
 
 
 def main() -> None:
@@ -363,7 +292,10 @@ def main() -> None:
 
     initialize_output()
     sent_count, rejected_count = send_messages(
-        producer, settings, valid_region_ids, valid_product_ids
+        producer,
+        settings,
+        valid_region_ids,
+        valid_product_ids,
     )
     log_rejected(rejected_count)
 
@@ -374,11 +306,6 @@ def main() -> None:
     producer.flush()
     log_summary(sent_count, rejected_count, settings)
 
-
-# === CONDITIONAL EXECUTION GUARD ===
-
-# WHY: If running this file as a script, then call main().
-# This is standard Python "boilerplate".
 
 if __name__ == "__main__":
     main()

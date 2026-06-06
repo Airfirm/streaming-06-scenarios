@@ -2,14 +2,13 @@
 
 Project-specific validation extensions.
 
-Generic validation helpers live in datafun-streaming.
-Add domain-specific validators here as requirements evolve.
+Technical Modification:
+- Adds money validation.
+- Adds optional allowed-value validation helper.
+- Keeps reusable validation helpers available for other files.
 
-OBS:
-  Don't edit this file - it should remain a working example.
-  Copy it, rename it data_validation_yourname.py, and modify your copy.
-  Change __all__ to export your custom validators.
-  Then, import your custom validators from your file.
+Author: O S
+Date: 2026-06-06
 """
 
 # === DECLARE IMPORTS ===
@@ -22,33 +21,18 @@ from datafun_streaming.data_validation.validation_utils import add_validation_er
 
 # === DECLARE EXPORTS ===
 
-# Use the built-in __all__ variable to declare a list of
-# public objects that this module exports.
-# This is a common Python convention that helps other developers understand
-# which functions are intended for use outside this module.
-
 __all__ = [
     "add_validation_errors",
     "make_lookup_set",
+    "validate_allowed_optional",
+    "validate_money_amount",
     "validate_quantity",
     "validate_reference_records",
 ]
 
 
-# === DOMAIN-SPECIFIC VALIDATORS ===
-
-
 def validate_quantity(value: str) -> list[str]:
-    """Return errors for an invalid quantity value.
-
-    All quantity values must be integers greater than or equal to 1.
-
-    Arguments:
-        value: The text value to validate.
-
-    Returns:
-        A list of errors, or an empty list if the value is valid.
-    """
+    """Return errors for an invalid quantity value."""
     try:
         quantity = int(value)
     except ValueError:
@@ -56,5 +40,36 @@ def validate_quantity(value: str) -> list[str]:
 
     if quantity < 1:
         return [f"Quantity must be at least 1: {value}"]
+
+    return []
+
+
+def validate_money_amount(value: str, *, field_name: str) -> list[str]:
+    """Return errors for an invalid money amount."""
+    try:
+        amount = float(value)
+    except ValueError:
+        return [f"{field_name} must be numeric: {value}"]
+
+    if amount < 0:
+        return [f"{field_name} must be greater than or equal to 0: {value}"]
+
+    return []
+
+
+def validate_allowed_optional(
+    record: dict[str, str],
+    *,
+    field_name: str,
+    allowed_values: set[str],
+) -> list[str]:
+    """Validate an optional field only when it has a value."""
+    value = str(record.get(field_name, "")).strip()
+
+    if not value:
+        return []
+
+    if value not in allowed_values:
+        return [f"Invalid {field_name}: {value!r}"]
 
     return []
