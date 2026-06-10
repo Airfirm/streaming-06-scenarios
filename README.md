@@ -101,7 +101,7 @@ For example, `regions.csv` provides tax rates, and `products.csv` provides produ
 The Kafka topic used for this project is:
 
 ```text
-streaming-06-scenarios-case
+streaming-06-scenarios-femi
 ```
 
 The producer sends valid sales records to this topic.
@@ -202,8 +202,8 @@ This helps answer questions such as:
 ### 1. Clone the repository
 
 ```powershell
-git clone <your-repo-url>
-cd <your-repo-folder>
+git clone https://github.com/Airfirm/streaming-06-scenarios
+cd streaming-06-scenarios
 ```
 
 ### 2. Install dependencies
