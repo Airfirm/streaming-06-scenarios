@@ -202,8 +202,8 @@ This helps answer questions such as:
 ### 1. Clone the repository
 
 ```powershell
-git clone https://github.com/Airfirm/streaming-06-scenarios
-cd streaming-06-scenarios
+git clone 'https://github.com"/Airfirm/streaming-06-scenarios'
+cd 'streaming-06-scenarios'
 ```
 
 ### 2. Install dependencies
