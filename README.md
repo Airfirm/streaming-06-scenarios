@@ -1,42 +1,28 @@
-# Module 6: Database Integration with Streaming Pipelines - streaming-06-scenarios
+# Streaming Data Pipeline Project - streaming-06-scenarios
 
-## Overview
+## Project Overview
 
-This project demonstrates how to build a Kafka streaming pipeline that reads
-sales data from a CSV file, sends valid records to a Kafka topic, consumes
-those records, enriches the messages, stores the results in DuckDB, writes
-output files, and creates a live sales chart.
+This project demonstrates a Python-based streaming data pipeline using Kafka. The project shows how
+data can move from a CSV file into a Kafka topic through a producer, then be consumed, processed,
+logged, stored, and reviewed through output artifacts.
 
-The project shows how streaming data can be validated, processed, enriched,
-stored, and analyzed after consumption.
+The purpose of this project is to show how a streaming workflow works from beginning to end.
 
-## Project Scenario
+It includes a Kafka admin file, a producer, a consumer, validation logic, derived field calculations,
+DuckDB storage, CSV output, and a saved visualization.
 
-The custom problem for this module is:
+## Custom Project Focus
+
+The custom focus of this project is:
 **Real-Time Sales Performance and Customer/Channel Monitoring**
 
-The goal is to monitor sales transactions as they move through a Kafka
-streaming pipeline. Each message represents one sales order. The consumer
-enriches each message with business intelligence fields that help identify
-sales performance by region, product category, sales channel, and order value.
+The pipeline streams sales transaction data and turns it into useful business intelligence.
+The consumer enriches each message with calculated fields and custom analytics fields that help
+monitor sales by region, product category, sales channel, order size, and high-value order status.
 
-## Technologies Used
+## Repository Contents
 
-This project uses:
-
-- Python
-- Kafka
-- DuckDB
-- CSV files
-- Matplotlib
-- PowerShell
-- WSL Ubuntu
-- VS Code
-- uv
-
-## Project Files
-
-The main custom files for this project are:
+Important project files include:
 
 ```text
 src/streaming/kafka_admin_femi.py
@@ -47,18 +33,40 @@ src/streaming/data_validation/data_contract_femi.py
 src/streaming/data_validation/data_validation_femi.py
 src/streaming/storage/storage_femi.py
 src/streaming/visualizations/live_visualizations_femi.py
+```
 
+Important data files include:
 
-Dataset
-
-The producer streams data from:
-
+```text
 data/sales.csv
+data/regions.csv
+data/products.csv
+data/currencies.csv
+data/discount_codes.csv
+```
 
-This file contains sales transaction records. Each row represents one sales order.
+Expected output files include:
+
+```text
+data/output/producer_rejected_sales_femi.csv
+data/output/consumed_sales_femi.csv
+data/output/sales_femi.duckdb
+data/output/sales_chart_femi.png
+```
+
+## Dataset
+
+The Kafka producer streams records from:
+
+```text
+data/sales.csv
+```
+
+This dataset contains sales transaction records. Each row represents one sales order.
 
 The sales records include fields such as:
 
+```text
 order_id
 datetime
 region_id
@@ -74,86 +82,91 @@ payment_method
 referral_source
 discount_code
 customer_note
+```
 
 The project also uses static reference tables:
 
+```text
 data/regions.csv
 data/products.csv
 data/currencies.csv
 data/discount_codes.csv
+```
 
-These files are not streamed directly. They are used for validation and enrichment. For example, regions.csv provides tax rates, and products.csv provides product category information.
+These reference tables are not streamed directly. They are used for validation and enrichment.
+For example, `regions.csv` provides tax rates, and `products.csv` provides product category information.
 
-Kafka Topic
+## Kafka Topic
 
 The Kafka topic used for this project is:
 
+```text
 streaming-06-scenarios-case
+```
 
 The producer sends valid sales records to this topic.
 
 The Kafka message key is:
 
+```text
 region_id
+```
 
-Using region_id as the key helps group sales messages by region.
+Using `region_id` as the message key helps group sales messages by region.
 
-Producer
+## Producer
 
 The producer file is:
 
+```text
 src/streaming/kafka_producer_femi.py
+```
 
-The producer reads records from data/sales.csv, validates each record, and sends valid records to Kafka.
+The producer reads sales records from `data/sales.csv`, validates them, and sends valid records to Kafka.
 
-If a record is invalid, it is not sent to Kafka. Instead, it is written to:
+If a record is invalid, the producer does not send it to Kafka. Instead, it writes the rejected record
+to:
 
+```text
 data/output/producer_rejected_sales_femi.csv
+```
 
-The producer validates records using the custom data contract and reference tables.
-
-Consumer
+## Consumer
 
 The consumer file is:
 
+```text
 src/streaming/kafka_consumer_femi.py
+```
 
-The consumer reads messages from the Kafka topic and processes each sales record.
+The consumer reads messages from Kafka and processes each sales record.
 
 For each valid consumed message, the consumer:
 
-validates required fields
-calculates subtotal
-calculates tax amount
-calculates total
-adds product category
-classifies the sales channel
-creates an order size band
-flags high-value orders
-tracks running sales total by region
-updates running statistics
-updates a live chart
-writes accepted records to CSV
-stores accepted records in DuckDB
-stores rejected records in DuckDB
-Technical Modifications
+* validates required fields
+* calculates subtotal
+* calculates tax amount
+* calculates total
+* adds product category
+* classifies the sales channel
+* creates an order size band
+* flags high-value orders
+* tracks running sales total by region
+* updates running statistics
+* updates a live chart
+* writes accepted records to CSV
+* stores accepted records in DuckDB
+* stores rejected records in DuckDB
+
+## Technical Modifications
 
 Several technical modifications were made for this project.
 
-Modified Output File Names
+The output files were customized with `_femi` in the file names.
 
-The output files were customized with _femi in the file names.
+The consumer was modified to add new analytics fields, including:
 
-Expected output files include:
-
-data/output/producer_rejected_sales_femi.csv
-data/output/consumed_sales_femi.csv
-data/output/sales_femi.duckdb
-data/output/sales_chart_femi.png
-Added Derived Fields
-
-The consumer now adds new analytics fields to each accepted sales message:
-
+```text
 subtotal
 tax_amount
 total
@@ -162,149 +175,206 @@ sales_channel
 order_size_band
 high_value_order
 region_running_total
-Added Product Category Enrichment
+```
 
-The consumer uses data/products.csv to add product category information to each consumed sales message.
+The storage logic was updated so DuckDB stores accepted and rejected consumed records.
+The DuckDB summary logs also report sales by region, product category, sales channel,
+and high-value order status.
 
-Added Sales Channel Classification
+The live visualization was customized to show real-time sales totals by Kafka message.
 
-The consumer classifies each sale based on whether it was online and which device type was used.
+## New Problem Applied
 
-Examples include:
+For the custom application, I applied the streaming pipeline to a real-time sales performance
+and customer/channel monitoring problem.
 
-online_mobile
-online_desktop
-online_tablet
-offline
-Added High-Value Order Flag
+This helps answer questions such as:
 
-The consumer flags orders as high-value if they meet or exceed the high-value threshold.
+* Which regions are generating sales?
+* Which product categories are being purchased?
+* Which sales channels are being used?
+* Which orders are high-value?
+* How much revenue is accumulating by region?
+* How many records were accepted or rejected?
 
-The field is:
+## Setup Instructions
 
-high_value_order
-Added Order Size Band
+### 1. Clone the repository
 
-The consumer classifies each order as:
+```powershell
+git clone <your-repo-url>
+cd <your-repo-folder>
+```
 
-low
-medium
-high
-Added Running Regional Sales Total
+### 2. Install dependencies
 
-The consumer tracks how much revenue is accumulating by region while messages are consumed.
+```powershell
+uv sync
+```
 
-The field is:
+### 3. Start Kafka
 
-region_running_total
-Added DuckDB Storage Summary
+Kafka should be running before the producer or consumer files are executed.
 
-The storage file summarizes consumed data by:
+In WSL, start Kafka from the Kafka folder:
 
-valid row count
-rejected row count
-sales by region
-sales by product category
-sales by channel
-high-value order status
-New Problem Applied
+```bash
+bin/kafka-server-start.sh config/server.properties
+```
 
-For Phase 5, I applied the streaming skills to a new business problem:
+Leave this terminal open while running the project.
 
-Real-time sales performance and customer/channel monitoring
+### 4. Verify the project
 
-This new problem uses the Kafka pipeline to help answer questions such as:
+From the project root folder in PowerShell, run:
 
-Which regions are generating sales?
-Which product categories are being purchased?
-Which sales channels are being used?
-Which orders are high-value?
-How much revenue is accumulating by region?
-How many records were accepted or rejected?
-How to Run the Project
-
-Before running the Python files, make sure Kafka is running in WSL.
-
-Then run the files from the project root folder in this order.
-
-1. Run the Kafka admin file
+```powershell
 uv run python -m streaming.kafka_admin_femi
+```
 
-This verifies or creates the Kafka topic.
+This verifies that Kafka is reachable and that the topic exists.
 
-2. Run the Kafka producer
+## How to Run the Project
+
+Run the files from the project root folder in this order.
+
+### Step 1: Run the Kafka admin file
+
+```powershell
+uv run python -m streaming.kafka_admin_femi
+```
+
+### Step 2: Run the Kafka producer
+
+```powershell
 uv run python -m streaming.kafka_producer_femi
+```
 
-This reads sales records from data/sales.csv, validates them, and sends valid messages to Kafka.
+### Step 3: Run the Kafka consumer
 
-3. Run the Kafka consumer
+```powershell
 uv run python -m streaming.kafka_consumer_femi
+```
 
-This consumes messages from Kafka, enriches them, stores them, writes output files, and saves the chart.
+## Expected Results
 
-Output Artifacts
+When the project runs successfully, the admin file verifies the Kafka topic.
 
-The project creates output artifacts in:
+The producer sends valid sales messages to Kafka and writes rejected records to a rejected records
+CSV file if any records fail validation.
 
-data/output/
+The consumer reads the Kafka messages, enriches them, writes accepted records to CSV, stores records
+in DuckDB, updates a live chart, and saves the final chart image.
 
-Expected output artifacts are:
+The consumer logs running statistics such as:
 
-producer_rejected_sales_femi.csv
-consumed_sales_femi.csv
-sales_femi.duckdb
-sales_chart_femi.png
-
-The CSV file can be opened and reviewed directly.
-
-The DuckDB file is a database file and should be reviewed using DuckDB queries or through the terminal summary logs.
-
-The PNG chart shows the sales total by Kafka message.
-
-Results
-
-When the project runs successfully, the admin file verifies that the Kafka topic exists.
-
-The producer sends valid sales messages to Kafka and writes any rejected records to the rejected producer CSV file.
-
-The consumer reads the Kafka messages and enriches each valid record with new analytics fields. It writes accepted records to a CSV file, stores records in DuckDB, updates a live chart, and saves the final chart image.
-
-The consumer also logs running statistics, including:
-
+```text
 total sales
 average sale
 minimum sale
 maximum sale
 accepted message count
 skipped message count
+```
 
-The DuckDB summary logs provide additional insights about sales by region, product category, sales channel, and high-value order status.
+The DuckDB summary logs provide additional information about:
 
-Interpretation
-
-This project shows how Kafka can be used to move data through a streaming pipeline. The producer sends sales messages to Kafka, Kafka stores the messages in a topic, and the consumer reads and processes those messages.
-
-The original example focused on basic message streaming. My custom version adds stronger validation, enrichment, charting, DuckDB storage, and business intelligence fields.
-
-The stream could help a business monitor sales activity in real time. Instead of only seeing raw sales records, the business can understand sales totals, regional activity, product category performance, channel performance, and high-value order activity.
-
-The business intelligence gained from the consumed messages includes:
-
-total revenue
-average order value
-minimum and maximum order values
+```text
 sales by region
 sales by product category
 sales by sales channel
-high-value order counts
-rejected message tracking
+high-value order status
+valid row count
+rejected row count
+```
 
-Overall, this module helped me understand how streaming data and stored data work together. Kafka handles the movement of data, while CSV files, DuckDB, and charts make the data useful for review and analysis.
+## Output Artifacts
 
-What I Learned
+The output artifacts are saved in:
 
-In this module, I learned how to connect a Kafka producer and consumer to a database-backed streaming pipeline. I learned how to validate records before sending them, enrich records after consuming them, and save the processed results for later analysis.
+```text
+data/output/
+```
 
-I also learned that field names and data types must match across the producer, consumer, data contract, storage file, and output files. Small mismatches can cause errors, so testing each step is important.
+Expected output files include:
 
-This project helped me better understand how real-time data pipelines can support business decisions.
+```text
+producer_rejected_sales_femi.csv
+consumed_sales_femi.csv
+sales_femi.duckdb
+sales_chart_femi.png
+```
+
+The CSV files can be opened directly.
+
+The DuckDB file is a database file and should be reviewed using DuckDB queries or through the terminal
+summary logs.
+
+The PNG file shows the saved chart from the streaming pipeline.
+
+## Troubleshooting
+
+If the producer or consumer cannot connect to Kafka, make sure Kafka is running and that the project
+is using:
+
+```text
+localhost:9092
+```
+
+If the consumer says the topic is empty, run the producer first.
+
+If DuckDB gives a type error when calculating totals, check that numeric fields are cast correctly
+in SQL queries, such as:
+
+```sql
+SUM(CAST(total AS DOUBLE))
+```
+
+If output files do not appear, make sure the project was run from the repository root folder and
+that the `data/output/` folder exists.
+
+## Peer Review Notes
+
+For peer review, reviewers should check whether:
+
+* the repository is organized clearly
+* the README explains how to set up and run the project
+* Kafka can be started successfully
+* the admin file verifies the topic
+* the producer sends data
+* the consumer processes data
+* output artifacts are created
+* there are no unexpected errors
+* the custom modifications are explained clearly
+
+## Interpretation
+
+This project shows how a streaming data pipeline moves data from a source file into Kafka and then
+into a consumer for processing and storage.
+
+The original example focused on basic Kafka message movement. My custom version adds validation,
+enrichment, DuckDB storage, CSV output, and visualization.
+
+The stream could help a business monitor sales activity in real time. Instead of only seeing raw
+records, the business can understand revenue, product category activity, customer channel activity,
+high-value orders, and regional sales performance.
+
+The business intelligence gained from the consumed messages includes:
+
+* total revenue
+* average order value
+* minimum and maximum order values
+* sales by region
+* sales by product category
+* sales by sales channel
+* high-value order counts
+* rejected message tracking
+
+Overall, this project helped me understand how streaming data and stored data work together.
+Kafka handles the movement of data, while CSV files, DuckDB, logs, and charts make the data
+useful for review and analysis.
+
+## AI Disclosure
+
+AI assistance was used to help review, debug, and improve parts of this project. I reviewed the
+suggested changes, tested the project, and remain responsible for the submitted work.
