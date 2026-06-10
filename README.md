@@ -373,8 +373,3 @@ The business intelligence gained from the consumed messages includes:
 Overall, this project helped me understand how streaming data and stored data work together.
 Kafka handles the movement of data, while CSV files, DuckDB, logs, and charts make the data
 useful for review and analysis.
-
-## AI Disclosure
-
-AI assistance was used to help review, debug, and improve parts of this project. I reviewed the
-suggested changes, tested the project, and remain responsible for the submitted work.
